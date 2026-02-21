@@ -82,7 +82,7 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({ 
                         if (!state.isConnected) {
                             Alert.alert(
                                 'Currently Offline',
-                                'You are currently offline if you want to make this update reflect on online update when you online again',
+                                'You are currently offline if you want to make this update reflect on online, please update when you online again',
                                 [
                                     { text: 'Cancel', style: 'cancel' },
                                     { 
