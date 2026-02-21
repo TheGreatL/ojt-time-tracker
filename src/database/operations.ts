@@ -1,6 +1,7 @@
 import { Profile, Settings, AttendanceLog, Note } from './schema';
 import { getDatabase } from './database';
-import { syncProfileToCloud } from '../utils/cloudSync';
+import { syncProfileToCloud, deleteProfileFromCloud } from '../utils/cloudSync';
+import { getProfileById } from './queries';
 import { generateUUID } from '../utils/uuid';
 
 // ==================== PROFILE OPERATIONS ====================
@@ -42,6 +43,13 @@ export const createProfile = async (
 export const deleteProfile = async (id: number): Promise<void> => {
     try {
         const db = getDatabase();
+
+        // Get profile UUID before deletion for cloud sync
+        const profile = await getProfileById(id);
+        if (profile?.uuid) {
+            await deleteProfileFromCloud(profile.uuid);
+        }
+
         await db.runAsync('DELETE FROM profiles WHERE id = ?', [id]);
         // CASCADE will automatically delete related settings and attendance logs
     } catch (error) {

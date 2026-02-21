@@ -17,8 +17,10 @@ import {
     useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import NetInfo from '@react-native-community/netinfo';
+import { Shield } from 'lucide-react-native';
 import { decode } from 'base64-arraybuffer';
+import { queueAvatarUpload } from '../utils/uploadQueue';
 import { supabase } from '../utils/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createProfile, updateProfile } from '../database/operations';
@@ -50,6 +52,8 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
     const [name, setName] = useState('');
     const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_OPTIONS[0]);
     const [isCustomAvatar, setIsCustomAvatar] = useState(false);
+    const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+    const [avatarMimeType, setAvatarMimeType] = useState<string>('image/jpeg');
     const [isGraduating, setIsGraduating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -75,10 +79,14 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.7,
+            base64: true,
         });
 
         if (!result.canceled) {
-            setSelectedAvatar(result.assets[0].uri);
+            const asset = result.assets[0];
+            setSelectedAvatar(asset.uri);
+            setAvatarBase64(asset.base64 || null);
+            setAvatarMimeType(asset.mimeType || 'image/jpeg');
             setIsCustomAvatar(true);
         }
     };
@@ -86,6 +94,8 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
     const handleSelectEmoji = (emoji: string) => {
         setSelectedAvatar(emoji);
         setIsCustomAvatar(false);
+        setAvatarBase64(null);
+        setAvatarMimeType('image/jpeg');
     };
 
     const handleSave = async () => {
@@ -108,7 +118,32 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
             return;
         }
 
+        if (isNaN(dailyMax) || dailyMax <= 0 || dailyMax > 24) {
+            Alert.alert('Invalid Daily Limit', 'Please enter a valid max hours per day (1-24).');
+            return;
+        }
+
+        if (!unlimitedWeekly && (isNaN(weeklyMax) || weeklyMax <= 0)) {
+            Alert.alert('Invalid Weekly Limit', 'Please enter a valid max hours per week.');
+            return;
+        }
+
         try {
+            const state = await NetInfo.fetch();
+            if (!state.isConnected) {
+                const proceed = await new Promise<boolean>((resolve) => {
+                    Alert.alert(
+                        'Currently Offline',
+                        'You are currently offline if you want to make this update reflect on online, please update when you online again',
+                        [
+                            { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                            { text: 'Proceed Locally', onPress: () => resolve(true) }
+                        ]
+                    );
+                });
+                if (!proceed) return;
+            }
+
             setIsSaving(true);
             const profileId = await createProfile(
                 name.trim(),
@@ -124,37 +159,47 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
             );
 
             // Handle custom avatar upload if applicable
-            if (isCustomAvatar) {
+            if (isCustomAvatar && avatarBase64) {
                 try {
-                    const fileExt = selectedAvatar.split('.').pop()?.toLowerCase() || 'jpg';
+                    // Use mimeType from picker result — reliable for all URI schemes on Android
+                    const mimeType = avatarMimeType || 'image/jpeg';
+                    const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
                     const fileName = `avatar_${Date.now()}.${fileExt}`;
                     const filePath = `${profileId}/${fileName}`;
-                    const base64 = await FileSystem.readAsStringAsync(selectedAvatar, {
-                        encoding: 'base64',
-                    });
 
+                    // base64 comes directly from the picker — no FileSystem read needed
                     const { error: uploadError } = await supabase.storage
                         .from('avatars')
-                        .upload(filePath, decode(base64), {
-                            contentType: `image/${fileExt}`,
+                        .upload(filePath, decode(avatarBase64), {
+                            contentType: mimeType,
                             upsert: true,
                         });
 
                     if (uploadError) {
-                        console.error('Initial avatar upload failed:', uploadError.message);
-                        showToast({ message: 'Profile created, but avatar sync failed.', type: 'warning' });
-                    } else {
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('avatars')
-                            .getPublicUrl(filePath);
-
-                        // Update profile with public URL (this also triggers cloud sync)
-                        await updateProfile(profileId, name.trim(), publicUrl, isGraduating);
+                        throw uploadError;
                     }
-                } catch (uploadErr) {
-                    console.error('Error during avatar upload:', uploadErr);
-                    showToast({ message: 'Profile created, but avatar upload failed.', type: 'warning' });
+
+                    const { data } = supabase.storage
+                        .from('avatars')
+                        .getPublicUrl(filePath);
+
+                    // Update with cloud URL
+                    await updateProfile(profileId, name.trim(), data.publicUrl, isGraduating);
+                } catch (error) {
+                    console.warn('Image upload failed, queuing for later:', error);
+                    
+                    // Queue the upload
+                    const mimeType = avatarMimeType || 'image/jpeg';
+                    await queueAvatarUpload(profileId, selectedAvatar, mimeType);
+
+                    showToast({
+                        message: 'Offline: Avatar queued for upload.',
+                        type: 'info'
+                    });
                 }
+            } else {
+                // If it's an emoji/default avatar, no upload needed
+                // Profile was already created with the correct avatar string
             }
 
             setIsSaving(false);
@@ -240,6 +285,7 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
                                 placeholder="e.g. 160"
                                 placeholderTextColor={colors.textTertiary}
                             />
+                            <Text style={styles.helperText}>Required by your university/program.</Text>
                         </View>
 
                         <View style={styles.inputGroup}>
@@ -322,6 +368,14 @@ export const AddProfileScreen: React.FC<AddProfileScreenProps> = ({ navigation }
                             )}
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity
+                        style={styles.privacyLink}
+                        onPress={() => Alert.alert('Privacy & Data', 'Your data is stored locally on this device.\n\nWhen "Broadcast My Hours" is enabled, only your progress percentage and display name are shared with the team peer-to-peer.')}
+                    >
+                        <Shield size={16} color={colors.textSecondary} />
+                        <Text style={styles.privacyLinkText}>Privacy & Data</Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView >
@@ -486,5 +540,24 @@ const styles = StyleSheet.create({
     scheduleContainer: {
         marginTop: spacing.xs,
     },
+    helperText: {
+        fontSize: responsiveFontSize(11),
+        color: colors.textTertiary,
+        marginTop: spacing.xs,
+        marginLeft: spacing.xs,
+    },
+    privacyLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        marginTop: spacing.xl,
+        marginBottom: spacing.xl,
+        padding: spacing.sm,
+    },
+    privacyLinkText: {
+        fontSize: responsiveFontSize(12),
+        color: colors.textSecondary,
+        textDecorationLine: 'underline',
+    },
 });
-

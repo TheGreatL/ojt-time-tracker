@@ -8,6 +8,7 @@ import { useProfile } from '../context/ProfileContext';
 import { updateProfile, updateSettings } from '../database/operations';
 import { getSettingsByProfileId } from '../database/queries';
 import { TouchableOpacity } from 'react-native';
+import { OfflineStatusIndicator } from '../components/OfflineStatusIndicator';
 
 interface UserProgress {
     profile_key: string;
@@ -22,6 +23,7 @@ export const LeaderboardScreen: React.FC = () => {
     const { activeProfile } = useProfile();
     const [isSharingEnabled, setIsSharingEnabled] = useState(false);
     const [leaderboardData, setLeaderboardData] = useState<UserProgress[]>([]);
+    const [filter, setFilter] = useState<'all' | 'completed' | 'ongoing'>('all');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -243,8 +245,34 @@ export const LeaderboardScreen: React.FC = () => {
                 <Text style={styles.title}>OJT Leaderboards</Text>
             </View>
 
+            {/* Filter Tabs */}
+            <View style={styles.filterContainer}>
+                {(['all', 'completed', 'ongoing'] as const).map((f) => (
+                    <TouchableOpacity
+                        key={f}
+                        style={[
+                            styles.filterTab,
+                            filter === f && styles.filterTabActive
+                        ]}
+                        onPress={() => setFilter(f)}
+                    >
+                        <Text style={[
+                            styles.filterText,
+                            filter === f && styles.filterTextActive
+                        ]}>
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
             <FlatList
-                data={leaderboardData}
+                data={leaderboardData.filter(item => {
+                    const isCompleted = item.completed_hours >= item.total_hours; // Or percentage >= 100
+                    if (filter === 'completed') return isCompleted;
+                    if (filter === 'ongoing') return !isCompleted;
+                    return true;
+                })}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.profile_key}
                 contentContainerStyle={styles.listContent}
@@ -253,11 +281,16 @@ export const LeaderboardScreen: React.FC = () => {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No user progress found.</Text>
-                        <Text style={styles.emptySubtext}>Sync your profile to see it here!</Text>
+                        <Text style={styles.emptyText}>No interns found.</Text>
+                        <Text style={styles.emptySubtext}>
+                            {filter === 'all' 
+                                ? "Sync your profile to see it here!" 
+                                : `No ${filter} internships found.`}
+                        </Text>
                     </View>
                 }
             />
+            <OfflineStatusIndicator />
         </View>
     );
 };
@@ -443,5 +476,32 @@ const styles = StyleSheet.create({
     optInFooter: {
         fontSize: typography.xs,
         color: colors.textTertiary,
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.md,
+        gap: spacing.sm,
+    },
+    filterTab: {
+        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.md,
+        borderRadius: 999, // Pill shape
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+    },
+    filterTabActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    filterText: {
+        fontSize: typography.sm,
+        fontWeight: '500',
+        color: colors.textSecondary,
+    },
+    filterTextActive: {
+        color: colors.textInverse,
+        fontWeight: '600',
     },
 });

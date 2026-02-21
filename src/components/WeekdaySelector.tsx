@@ -8,6 +8,7 @@ import { scale, responsiveFontSize } from '../utils/responsive';
 interface WeekdaySelectorProps {
     selectedDays: number[]; // Array of day indices (0=Sunday, 6=Saturday)
     onDaysChange: (days: number[]) => void;
+    disabled?: boolean;
 }
 
 const WEEKDAYS = [
@@ -23,8 +24,10 @@ const WEEKDAYS = [
 export const WeekdaySelector: React.FC<WeekdaySelectorProps> = ({
     selectedDays,
     onDaysChange,
+    disabled = false,
 }) => {
     const toggleDay = (dayValue: number) => {
+        if (disabled) return;
         if (selectedDays.includes(dayValue)) {
             onDaysChange(selectedDays.filter((d) => d !== dayValue));
         } else {
@@ -40,9 +43,11 @@ export const WeekdaySelector: React.FC<WeekdaySelectorProps> = ({
                     <TouchableOpacity
                         key={day.value}
                         onPress={() => toggleDay(day.value)}
+                        disabled={disabled}
                         style={[
                             styles.dayButton,
                             isSelected && styles.dayButtonSelected,
+                            disabled && { opacity: 0.6 },
                         ]}
                         activeOpacity={0.7}
                     >
@@ -50,6 +55,7 @@ export const WeekdaySelector: React.FC<WeekdaySelectorProps> = ({
                             style={[
                                 styles.dayText,
                                 isSelected && styles.dayTextSelected,
+                                disabled && isSelected && { color: colors.textInverse },
                             ]}
                         >
                             {day.label}

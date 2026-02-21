@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { PerformanceMonitor } from '../components/PerformanceMonitor';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { NotesScreen } from '../screens/NotesScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -31,37 +32,57 @@ export const MainNavigator: React.FC = () => {
         >
             <Tab.Screen
                 name="Dashboard"
-                component={DashboardScreen}
                 options={{
                     tabBarLabel: 'Home',
                     tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
                 }}
-            />
+            >
+                {(props) => (
+                    <PerformanceMonitor componentName="DashboardScreen">
+                        <DashboardScreen {...props} />
+                    </PerformanceMonitor>
+                )}
+            </Tab.Screen>
             <Tab.Screen
                 name="Leaderboards"
-                component={LeaderboardScreen}
                 options={{
                     tabBarLabel: 'Leaderboards',
                     tabBarIcon: ({ color, size }) => <Trophy color={color} size={size} />,
                 }}
-            />
+            >
+                {(props) => (
+                    <PerformanceMonitor componentName="LeaderboardScreen">
+                        <LeaderboardScreen {...props} />
+                    </PerformanceMonitor>
+                )}
+            </Tab.Screen>
             <Tab.Screen
                 name="Notes"
-                component={NotesScreen}
                 options={{
                     tabBarLabel: 'Notes',
                     tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />,
                 }}
-            />
+            >
+                {(props) => (
+                    <PerformanceMonitor componentName="NotesScreen">
+                        <NotesScreen {...props} />
+                    </PerformanceMonitor>
+                )}
+            </Tab.Screen>
             <Tab.Screen
                 name="Settings"
-                component={SettingsScreen}
                 options={{
                     tabBarLabel: 'Settings',
                     tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
                     headerShown: true,
                 }}
-            />
+            >
+                 {(props) => (
+                    <PerformanceMonitor componentName="SettingsScreen">
+                        <SettingsScreen {...props} />
+                    </PerformanceMonitor>
+                )}
+            </Tab.Screen>
         </Tab.Navigator>
     );
 };

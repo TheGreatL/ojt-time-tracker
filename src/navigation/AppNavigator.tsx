@@ -3,6 +3,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { PerformanceMonitor } from '../components/PerformanceMonitor';
 
 import { ProfileSelectionScreen } from '../screens/ProfileSelectionScreen';
 import { AddProfileScreen } from '../screens/AddProfileScreen';
@@ -39,29 +40,54 @@ export const AppNavigator: React.FC = () => {
             >
                 <Stack.Screen
                     name="ProfileSelection"
-                    component={ProfileSelectionScreen}
                     options={{ headerShown: false }}
-                />
+                >
+                    {(props) => (
+                        <PerformanceMonitor componentName="ProfileSelectionScreen">
+                            <ProfileSelectionScreen {...props} />
+                        </PerformanceMonitor>
+                    )}
+                </Stack.Screen>
                 <Stack.Screen
                     name="AddProfile"
-                    component={AddProfileScreen}
-                    options={{ title: 'New Profile' }}
-                />
+                    options={{ headerShown: false }}
+                >
+                    {(props) => (
+                        <PerformanceMonitor componentName="AddProfileScreen">
+                            <AddProfileScreen {...props} />
+                        </PerformanceMonitor>
+                    )}
+                </Stack.Screen>
                 <Stack.Screen
                     name="Main"
-                    component={MainNavigator}
                     options={{ headerShown: false }}
-                />
+                >
+                    {(props) => (
+                        <PerformanceMonitor componentName="MainNavigator">
+                            <MainNavigator {...props} />
+                        </PerformanceMonitor>
+                    )}
+                </Stack.Screen>
                 <Stack.Screen
                     name="EditProfile"
-                    component={EditProfileScreen}
-                    options={{ title: 'Edit Profile' }}
-                />
+                    options={{ headerShown: false }}
+                >
+                    {(props) => (
+                        <PerformanceMonitor componentName="EditProfileScreen">
+                            <EditProfileScreen {...props} />
+                        </PerformanceMonitor>
+                    )}
+                </Stack.Screen>
                 <Stack.Screen
                     name="About"
-                    component={AboutScreen}
                     options={{ title: 'About App' }}
-                />
+                >
+                    {(props) => (
+                        <PerformanceMonitor componentName="AboutScreen">
+                            <AboutScreen {...props} />
+                        </PerformanceMonitor>
+                    )}
+                </Stack.Screen>
             </Stack.Navigator>
         </NavigationContainer>
     );

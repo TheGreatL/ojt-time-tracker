@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Plus, Sparkles } from 'lucide-react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { Plus, Sparkles, Shield } from 'lucide-react-native';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { deleteProfile } from '../database/operations';
 import { getAllProfiles } from '../database/queries';
@@ -77,6 +78,29 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({ 
                     text: 'Delete',
                     style: 'destructive',
                     onPress: async () => {
+                        const state = await NetInfo.fetch();
+                        if (!state.isConnected) {
+                            Alert.alert(
+                                'Currently Offline',
+                                'You are currently offline if you want to make this update reflect on online update when you online again',
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { 
+                                        text: 'Delete Locally Anyway', 
+                                        onPress: async () => {
+                                            await deleteProfile(profile.id);
+                                            if (activeProfile?.id === profile.id) {
+                                                setActiveProfile(null);
+                                            }
+                                            loadProfiles();
+                                            showToast({ message: 'Profile deleted locally.', type: 'info' });
+                                        }
+                                    }
+                                ]
+                            );
+                            return;
+                        }
+
                         await deleteProfile(profile.id);
                         if (activeProfile?.id === profile.id) {
                             setActiveProfile(null);
@@ -147,6 +171,14 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({ 
                             <Plus size={scale(24)} color={colors.textInverse} />
                             <Text style={globalStyles.buttonText}>Add Profile</Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.privacyLink}
+                            onPress={() => Alert.alert('Privacy & Data', 'Your data is stored locally on this device.\n\nWhen "Broadcast My Hours" is enabled, only your progress percentage and display name are shared with the team peer-to-peer.')}
+                        >
+                            <Shield size={scale(16)} color={colors.textSecondary} />
+                            <Text style={styles.privacyLinkText}>Privacy & Data</Text>
+                        </TouchableOpacity>
                     </View>
                 }
             />
@@ -187,6 +219,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         width: '100%',
         maxWidth: 300,
+        borderRadius: 999, // User requested roundness
     },
     footer: {
         marginTop: spacing.lg,
@@ -199,5 +232,18 @@ const styles = StyleSheet.create({
         fontSize: responsiveFontSize(12),
         color: colors.textTertiary,
         fontStyle: 'italic',
+    },
+    privacyLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        marginTop: spacing.sm,
+        padding: spacing.sm,
+    },
+    privacyLinkText: {
+        fontSize: responsiveFontSize(12),
+        color: colors.textSecondary,
+        textDecorationLine: 'underline',
     },
 });

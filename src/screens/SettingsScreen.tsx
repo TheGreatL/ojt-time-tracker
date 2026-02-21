@@ -12,6 +12,7 @@ import {
     Switch,
     Alert,
 } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/MainNavigator';
@@ -39,6 +40,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     const [isSharingEnabled, setIsSharingEnabled] = useState(false);
     const [isAvatarVisible, setIsAvatarVisible] = useState(false);
     const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Mon-Fri
+    const [isEditing, setIsEditing] = useState(false);
 
     const loadSettings = async () => {
         if (!activeProfile) return;
@@ -102,6 +104,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                     text: 'Save',
                     onPress: async () => {
                         try {
+                            const state = await NetInfo.fetch();
+                            if (!state.isConnected) {
+                                const proceed = await new Promise<boolean>((resolve) => {
+                                    Alert.alert(
+                                        'Currently Offline',
+                                        'You are currently offline if you want to make this update reflect on online, please update when you online again',
+                                        [
+                                            { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                                            { text: 'Proceed Locally', onPress: () => resolve(true) }
+                                        ]
+                                    );
+                                });
+                                if (!proceed) return;
+                            }
+
                             await updateSettings(activeProfile.id, {
                                 total_hours_required: total,
                                 max_hours_per_day: dailyMax,
@@ -116,6 +133,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                             await refreshProfile();
 
                             showToast({ message: 'Settings saved successfully!', type: 'success' });
+                            setIsEditing(false);
                         } catch (error) {
                             Alert.alert('Error', 'Failed to save settings. Please try again.');
                             console.error('Error saving settings:', error);
@@ -126,19 +144,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         );
     };
 
+    const handleCancel = () => {
+        loadSettings();
+        setIsEditing(false);
+    };
+
     useLayoutEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <TouchableOpacity
-                    onPress={handleSave}
-                    style={{ marginRight: spacing.md }}
-                    activeOpacity={0.7}
-                >
-                    <Save size={24} color={colors.primary} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginRight: spacing.md }}>
+                    {isEditing ? (
+                        <>
+                            <TouchableOpacity
+                                onPress={handleCancel}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={{ color: colors.danger, fontWeight: typography.medium as any }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSave}
+                                activeOpacity={0.7}
+                            >
+                                <Save size={24} color={colors.primary} />
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <TouchableOpacity
+                            onPress={() => setIsEditing(true)}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={{ color: colors.primary, fontWeight: typography.medium as any }}>Edit</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             ),
         });
-    }, [navigation, handleSave]);
+    }, [navigation, isEditing, handleSave, handleCancel]);
 
     useFocusEffect(
         useCallback(() => {
@@ -152,13 +193,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
 
     return (
         <SafeAreaView style={globalStyles.container}>
-            <View style={styles.header}>
-                <Text style={globalStyles.heading2}>Settings</Text>
-                <Text style={[globalStyles.caption, styles.subtitle]}>
-                    Configure your internship requirements
-                </Text>
-            </View>
-
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 <View style={[globalStyles.card, styles.section]}>
@@ -169,15 +203,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                     <View style={styles.inputGroup}>
                         <Text style={globalStyles.inputLabel}>Total Hours Required</Text>
                         <TextInput
-                            style={globalStyles.input}
+                            style={[globalStyles.input, !isEditing && { opacity: 0.7, backgroundColor: colors.backgroundDark }]}
                             value={totalHours}
                             onChangeText={setTotalHours}
                             keyboardType="numeric"
                             placeholder="160"
                             placeholderTextColor={colors.textTertiary}
+                            editable={isEditing}
                         />
                     </View>
                 </View>
+
+
 
                 <View style={[globalStyles.card, styles.section]}>
                     <View style={styles.sectionHeader}>
@@ -187,12 +224,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                     <View style={styles.inputGroup}>
                         <Text style={globalStyles.inputLabel}>Max Hours Per Day</Text>
                         <TextInput
-                            style={globalStyles.input}
+                            style={[globalStyles.input, !isEditing && { opacity: 0.7, backgroundColor: colors.backgroundDark }]}
                             value={maxHoursPerDay}
                             onChangeText={setMaxHoursPerDay}
                             keyboardType="numeric"
                             placeholder="8"
                             placeholderTextColor={colors.textTertiary}
+                            editable={isEditing}
                         />
                         <Text style={globalStyles.caption}>
                             Maximum hours you can work in a single day
@@ -213,17 +251,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                                 onValueChange={setUnlimitedWeekly}
                                 trackColor={{ false: colors.border, true: colors.primary }}
                                 thumbColor={colors.surface}
+                                disabled={!isEditing}
                             />
                         </View>
                         {!unlimitedWeekly && (
                             <>
                                 <TextInput
-                                    style={globalStyles.input}
+                                    style={[globalStyles.input, !isEditing && { opacity: 0.7, backgroundColor: colors.backgroundDark }]}
                                     value={maxHoursPerWeek}
                                     onChangeText={setMaxHoursPerWeek}
                                     keyboardType="numeric"
                                     placeholder="40"
                                     placeholderTextColor={colors.textTertiary}
+                                    editable={isEditing}
                                 />
                                 <Text style={globalStyles.caption}>
                                     Maximum hours you can work in a week
@@ -241,7 +281,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                     <Text style={[globalStyles.caption, styles.scheduleCaption]}>
                         Select your regular work days
                     </Text>
-                    <WeekdaySelector selectedDays={selectedDays} onDaysChange={setSelectedDays} />
+                    <WeekdaySelector selectedDays={selectedDays} onDaysChange={setSelectedDays} disabled={!isEditing} />
                 </View>
 
                 <View style={[globalStyles.card, styles.section]}>
@@ -265,6 +305,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                                 }}
                                 trackColor={{ false: colors.border, true: colors.primary }}
                                 thumbColor={colors.surface}
+                                disabled={!isEditing}
                             />
                         </View>
 
@@ -278,7 +319,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                             <Switch
                                 value={isAvatarVisible}
                                 onValueChange={setIsAvatarVisible}
-                                disabled={!isSharingEnabled}
+                                disabled={!isSharingEnabled || !isEditing}
                                 trackColor={{ false: colors.border, true: colors.primary }}
                                 thumbColor={colors.surface}
                             />
@@ -292,21 +333,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
 };
 
 const styles = StyleSheet.create({
-    header: {
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.lg,
-        paddingBottom: spacing.md,
-        backgroundColor: colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
     scrollContent: {
         padding: spacing.lg,
         flexGrow: 1,
         paddingBottom: scale(100),
-    },
-    subtitle: {
-        marginTop: spacing.xs,
     },
     section: {
         marginBottom: spacing.lg,
@@ -336,4 +366,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: spacing.lg,
     },
+
 });

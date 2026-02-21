@@ -1,21 +1,21 @@
 import { scale, moderateScale, responsiveFontSize } from '../utils/responsive';
 
 export const colors = {
-    // ... (unchanged)
-    primary: '#6366F1', // Indigo
-    primaryLight: '#818CF8',
-    primaryDark: '#4F46E5',
+    // Primary palette (Monochrome)
+    primary: '#000000', // Black
+    primaryLight: '#333333', // Dark Grey
+    primaryDark: '#000000', // Black (keeps simple)
 
-    // Secondary palette
-    secondary: '#EC4899', // Pink
-    secondaryLight: '#F472B6',
-    secondaryDark: '#DB2777',
+    // Secondary palette (Accents)
+    secondary: '#666666', // Medium Grey
+    secondaryLight: '#999999', // Light Grey
+    secondaryDark: '#333333', // Dark Grey
 
-    // Status colors
-    success: '#10B981', // Green - for logged days
+    // Status colors (Restored)
+    success: '#10B981', // Green
     warning: '#F59E0B', // Amber
-    danger: '#EF4444', // Red - for excluded days
-    gold: '#FBBF24', // Gold - for predicted completion
+    danger: '#EF4444', // Red
+    gold: '#FBBF24', // Gold
 
     // Neutral palette
     background: '#FFFFFF',
@@ -24,16 +24,16 @@ export const colors = {
     surfaceDark: '#F3F4F6',
 
     // Text colors
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    textTertiary: '#9CA3AF',
+    textPrimary: '#000000',
+    textSecondary: '#666666',
+    textTertiary: '#999999',
     textInverse: '#FFFFFF',
 
     // Border colors
-    border: '#E5E7EB',
-    borderDark: '#D1D5DB',
+    border: '#E0E0E0',
+    borderDark: '#000000',
 
-    // Calendar colors
+    // Calendar colors (Restored)
     calendarWorked: '#10B981', // Green
     calendarScheduled: '#9CA3AF', // Grey
     calendarExcluded: '#EF4444', // Red

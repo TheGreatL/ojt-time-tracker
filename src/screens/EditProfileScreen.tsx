@@ -17,10 +17,12 @@ import {
     ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import NetInfo from '@react-native-community/netinfo';
+import { Shield } from 'lucide-react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { decode } from 'base64-arraybuffer';
-import * as FileSystem from 'expo-file-system';
+import { queueAvatarUpload } from '../utils/uploadQueue';
 import { supabase } from '../utils/supabase';
 import { updateProfile } from '../database/operations';
 import { getProfileById } from '../database/queries';
@@ -51,12 +53,18 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
     const [name, setName] = useState('');
     const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_OPTIONS[0]);
     const [isCustomAvatar, setIsCustomAvatar] = useState(false);
+    const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+    const [avatarMimeType, setAvatarMimeType] = useState<string>('image/jpeg');
     const [isGraduating, setIsGraduating] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadProfileData();
     }, [profileId]);
+
+    React.useLayoutEffect(() => {
+        navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const loadProfileData = async () => {
         try {
@@ -96,10 +104,14 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.7,
+            base64: true,
         });
 
         if (!result.canceled) {
-            setSelectedAvatar(result.assets[0].uri);
+            const asset = result.assets[0];
+            setSelectedAvatar(asset.uri);
+            setAvatarBase64(asset.base64 || null);
+            setAvatarMimeType(asset.mimeType || 'image/jpeg');
             setIsCustomAvatar(true);
         }
     };
@@ -107,6 +119,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
     const handleSelectEmoji = (emoji: string) => {
         setSelectedAvatar(emoji);
         setIsCustomAvatar(false);
+        setAvatarBase64(null);
+        setAvatarMimeType('image/jpeg');
     };
 
     const handleSave = async () => {
@@ -115,25 +129,38 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
             return;
         }
 
-        setLoading(true);
         try {
+            const state = await NetInfo.fetch();
+            if (!state.isConnected) {
+                const proceed = await new Promise<boolean>((resolve) => {
+                    Alert.alert(
+                        'Currently Offline',
+                        'You are currently offline if you want to make this update reflect on online, please update when you online again',
+                        [
+                            { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                            { text: 'Proceed Locally', onPress: () => resolve(true) }
+                        ]
+                    );
+                });
+                if (!proceed) return;
+            }
+
+            setLoading(true);
             let avatarToSave = selectedAvatar;
 
-            // Upload to Supabase Storage if it's a custom local image
-            if (isCustomAvatar && (selectedAvatar.startsWith('file://') || selectedAvatar.startsWith('content://'))) {
-                const fileExt = selectedAvatar.split('.').pop()?.toLowerCase() || 'jpg';
+            // Upload to Supabase Storage if it's a new custom local image (base64 available)
+            if (isCustomAvatar && avatarBase64) {
+                const mimeType = avatarMimeType || 'image/jpeg';
+                const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
                 const fileName = `${Date.now()}.${fileExt}`;
                 const filePath = `${profileId}/${fileName}`;
 
                 try {
-                    const base64 = await FileSystem.readAsStringAsync(selectedAvatar, {
-                        encoding: 'base64',
-                    });
-
+                    // base64 comes directly from the picker — no FileSystem read needed
                     const { error: uploadError } = await supabase.storage
                         .from('avatars')
-                        .upload(filePath, decode(base64), {
-                            contentType: `image/${fileExt}`,
+                        .upload(filePath, decode(avatarBase64), {
+                            contentType: mimeType,
                             upsert: true,
                         });
 
@@ -147,12 +174,18 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
 
                     avatarToSave = data.publicUrl;
                 } catch (error) {
-                    console.warn('Image upload failed, falling back to local URI:', error);
+                    console.warn('Image upload failed, queuing for later:', error);
+                    
+                    // Queue the upload
+                    const mimeType = avatarMimeType || 'image/jpeg';
+                    await queueAvatarUpload(profileId, selectedAvatar, mimeType);
+
                     showToast({
-                        message: 'Offline: Changes saved locally. Leaderboard sync pending.',
-                        type: 'warning'
+                        message: 'Offline: Avatar queued for upload.',
+                        type: 'info'
                     });
-                    // Fallback to local URI
+                    
+                    // Fallback to local URI for immediate display
                     avatarToSave = selectedAvatar;
                 }
             }
@@ -268,6 +301,14 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
                                 )}
                             </TouchableOpacity>
                         </View>
+
+                        <TouchableOpacity
+                            style={styles.privacyLink}
+                            onPress={() => Alert.alert('Privacy & Data', 'Your data is stored locally on this device.\n\nWhen "Broadcast My Hours" is enabled, only your progress percentage and display name are shared with the team peer-to-peer.')}
+                        >
+                            <Shield size={16} color={colors.textSecondary} />
+                            <Text style={styles.privacyLinkText}>Privacy & Data</Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -306,6 +347,9 @@ const styles = StyleSheet.create({
     },
     avatarGrid: {
         marginTop: spacing.md,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
     },
     avatarOption: {
         width: 50,
@@ -392,5 +436,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: colors.textPrimary,
         fontWeight: '500',
+    },
+    privacyLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        marginTop: spacing.xl,
+        marginBottom: spacing.xl,
+        padding: spacing.sm,
+    },
+    privacyLinkText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        textDecorationLine: 'underline',
     },
 });

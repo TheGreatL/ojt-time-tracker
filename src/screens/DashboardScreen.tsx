@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Calendar as CalendarIcon, Settings, User, HelpCircle, Info } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Settings, User, HelpCircle, Info, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ProgressBar } from '../components/ProgressBar';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { OnboardingOverlay } from '../components/OnboardingOverlay';
@@ -237,9 +237,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
                         size={width > 400 ? "medium" : "small"}
                         hideName={true}
                     />
-                    <View>
-                        <Text style={globalStyles.heading2}>{activeProfile?.name}</Text>
-                        <Text style={globalStyles.caption}>Internship Tracker</Text>
+                    <View style={{ flex: 1 }}>
+                        <Text 
+                            style={globalStyles.heading2}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {activeProfile?.name}
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.headerButtons}>
@@ -317,6 +322,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
                         <View style={styles.calendarSection}>
                             <Text style={globalStyles.heading3}>Calendar</Text>
                             <Calendar
+                                enableSwipeMonths={true}
                                 markedDates={markedDates}
                                 onDayPress={handleDayPress}
                                 theme={{
@@ -416,9 +422,11 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     profileInfo: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.md,
+        marginRight: spacing.md,
     },
     headerButtons: {
         flexDirection: 'row',
@@ -436,22 +444,25 @@ const styles = StyleSheet.create({
     remainingText: {
         marginTop: spacing.sm,
         textAlign: 'center',
+        color: colors.textSecondary,
     },
     predictionCard: {
         marginBottom: spacing.lg,
-        backgroundColor: colors.gold + '10',
-        borderWidth: 2,
+        backgroundColor: colors.gold + '15', // Soft Gold background
+        borderWidth: 1,
         borderColor: colors.gold,
     },
     dateContainer: {
         marginTop: spacing.md,
         padding: spacing.md,
-        backgroundColor: colors.gold + '20',
+        backgroundColor: colors.surface,
         borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.gold,
     },
     dateText: {
         fontSize: responsiveFontSize(16),
-        fontWeight: '600',
+        fontWeight: 'bold',
         color: colors.textPrimary,
         textAlign: 'center',
     },
@@ -459,6 +470,7 @@ const styles = StyleSheet.create({
         marginTop: spacing.sm,
         textAlign: 'center',
         color: colors.warning,
+        fontStyle: 'italic',
     },
     calendarSection: {
         marginTop: spacing.md,
@@ -490,7 +502,7 @@ const styles = StyleSheet.create({
     legendDot: {
         width: scale(16),
         height: scale(16),
-        borderRadius: scale(8),
+        borderRadius: scale(8), // Round dots
     },
     sectionHeader: {
         flexDirection: 'row',

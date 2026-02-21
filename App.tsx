@@ -11,18 +11,51 @@ import { ToastProvider } from './src/context/ToastContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database/database';
 import { colors } from './src/styles/theme';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import NetInfo from '@react-native-community/netinfo';
+import { processAvatarQueue } from './src/utils/uploadQueue';
+import { processOfflineQueue } from './src/utils/offlineQueue';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const [fontsLoaded] = useFonts({
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+  });
 
   useEffect(() => {
     initializeApp();
+
+    // Listen for network state changes
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && state.isInternetReachable) {
+        console.log('[App] Online detected, processing queues...');
+        processAvatarQueue();
+        processOfflineQueue();
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const initializeApp = async () => {
     try {
       // Initialize database
       await initDatabase();
+      // Try processing queues on startup if online
+      const netState = await NetInfo.fetch();
+      if (netState.isConnected && netState.isInternetReachable) {
+        processOfflineQueue();
+        processAvatarQueue();
+      }
       setIsReady(true);
     } catch (error) {
       console.error('Error initializing app:', error);

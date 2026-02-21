@@ -17,15 +17,22 @@ export const globalStyles = StyleSheet.create({
     // Card styles
     card: {
         backgroundColor: colors.surface,
-        borderRadius: borderRadius.lg,
+        borderRadius: borderRadius.md, // Slightly sharper
         padding: spacing.lg,
-        ...shadows.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        // Removed heavy shadows for a flatter look
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03, // Very subtle
+        shadowRadius: 4,
+        elevation: 1,
     },
 
     // Button styles
     button: {
         backgroundColor: colors.primary,
-        borderRadius: borderRadius.md,
+        borderRadius: borderRadius.full, // Fully rounded buttons
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         minHeight: touchTarget.minHeight,
@@ -36,17 +43,20 @@ export const globalStyles = StyleSheet.create({
     buttonText: {
         color: colors.textInverse,
         fontSize: typography.base,
-        fontWeight: typography.semibold,
+        fontWeight: typography.bold, // Bolder text
+        letterSpacing: 0.5,
     },
 
     buttonSecondary: {
         backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
+        borderWidth: 1.5, // Slightly thicker border
+        borderColor: colors.textPrimary, // Black border
+        borderRadius: borderRadius.full,
     },
 
     buttonSecondaryText: {
         color: colors.textPrimary,
+        fontWeight: typography.medium,
     },
 
     // Input styles
@@ -54,7 +64,7 @@ export const globalStyles = StyleSheet.create({
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: borderRadius.md,
+        borderRadius: borderRadius.sm,
         paddingVertical: spacing.sm,
         paddingHorizontal: spacing.md,
         fontSize: typography.base,
@@ -64,9 +74,11 @@ export const globalStyles = StyleSheet.create({
 
     inputLabel: {
         fontSize: typography.sm,
-        fontWeight: typography.medium,
-        color: colors.textSecondary,
+        fontWeight: typography.semibold, // Bolder labels
+        color: colors.textPrimary, // Darker labels
         marginBottom: spacing.xs,
+        textTransform: 'uppercase', // Uppercase labels for style
+        letterSpacing: 0.5,
     },
 
     // Text styles

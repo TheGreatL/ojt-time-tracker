@@ -9,7 +9,7 @@ import {
     ScrollView,
     Image,
 } from 'react-native';
-import { Info, CheckCircle2, Clock, Trophy, FileText, Zap } from 'lucide-react-native';
+import { Info, CheckCircle2, Clock, Trophy, FileText, Zap, Shield, Mail } from 'lucide-react-native';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import { globalStyles } from '../styles/globalStyles';
 
@@ -80,6 +80,45 @@ export const AboutScreen: React.FC = () => {
                         We want to eliminate the stress of manual hour tracking so you can focus
                         on what matters most: learning and growing in your chosen field.
                     </Text>
+                </View>
+
+                <View style={[styles.section, styles.privacySection]}>
+                    <View style={styles.sectionHeader}>
+                        <Shield size={20} color={colors.primary} />
+                        <Text style={globalStyles.heading3}>Privacy & Data</Text>
+                    </View>
+                    <View style={styles.privacyContent}>
+                        <Text style={styles.privacyTitle}>Your Data, Your Control</Text>
+                        <Text style={styles.privacyText}>
+                            <Text style={styles.privacyBold}>Cloud Data (Supabase):</Text> Only your shared progress data (name, total hours, completion percentage, and avatar) is stored in the cloud for the leaderboard feature. This data is visible to the developer for system maintenance.
+                        </Text>
+                        <Text style={styles.privacyText}>
+                            <Text style={styles.privacyBold}>Local Data (Your Device):</Text> All other data including your detailed attendance logs, notes, and personal settings are stored locally on your device. The developer has no access to this information.
+                        </Text>
+                        <Text style={styles.privacyFooter}>
+                            💡 Your notes and detailed work logs remain completely private and never leave your device.
+                        </Text>
+                    </View>
+                </View>
+                
+                <View style={[styles.section, styles.contactSection]}>
+                    <View style={styles.sectionHeader}>
+                        <Mail size={20} color={colors.primary} />
+                        <Text style={globalStyles.heading3}>Contact Developer</Text>
+                    </View>
+                    <Text style={globalStyles.bodyText}>
+                        If you encounter any errors or have questions, you can message the developer here:
+                        (girls only)
+                    </Text>
+                    <View style={styles.contactCard}>
+                         <View style={styles.profileImageContainer}>
+                            {/* Placeholder for profile image if available */}
+                            <Zap size={24} color={'#FFFFFF'} />
+                        </View>
+                        <View>
+                            <Text style={styles.contactEmail}>carlonkenandrew.business@gmail.com</Text>
+                        </View>
+                    </View>
                 </View>
 
                 <View style={[styles.section, styles.donationSection]}>
@@ -197,5 +236,72 @@ const styles = StyleSheet.create({
     qrImage: {
         width: 250,
         height: 400,
+    },
+    privacySection: {
+        backgroundColor: colors.surface,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.primary,
+        padding: spacing.md,
+        borderRadius: borderRadius.md,
+    },
+    privacyContent: {
+        marginTop: spacing.sm,
+    },
+    privacyTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+        marginBottom: spacing.md,
+    },
+    privacyText: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        lineHeight: 20,
+        marginBottom: spacing.md,
+    },
+    privacyBold: {
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+    },
+    privacyFooter: {
+        fontSize: 12,
+        color: colors.textTertiary,
+        fontStyle: 'italic',
+        marginTop: spacing.sm,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+    contactSection: {
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    contactCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.md,
+        backgroundColor: colors.background,
+        padding: spacing.md,
+        borderRadius: borderRadius.md,
+        gap: spacing.md,
+    },
+     profileImageContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    contactEmail: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.textPrimary,
     },
 });

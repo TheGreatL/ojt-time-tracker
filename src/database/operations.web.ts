@@ -1,7 +1,7 @@
 // Database CRUD operations for Web (In-Memory)
 
 import { Profile, Settings, AttendanceLog, Note } from './schema';
-import { syncProfileToCloud } from '../utils/cloudSync';
+import { syncProfileToCloud, deleteProfileFromCloud } from '../utils/cloudSync';
 import { generateUUID } from '../utils/uuid';
 
 // In-memory storage
@@ -42,6 +42,11 @@ export const createProfile = async (name: string, avatar: string, isGraduating: 
 
 export const deleteProfile = async (id: number): Promise<void> => {
     try {
+        const profileToDelete = profiles.find((p) => p.id === id);
+        if (profileToDelete?.uuid) {
+            await deleteProfileFromCloud(profileToDelete.uuid);
+        }
+
         profiles = profiles.filter((p) => p.id !== id);
         settings = settings.filter((s) => s.profile_id !== id);
         logs = logs.filter((l) => l.profile_id !== id);
