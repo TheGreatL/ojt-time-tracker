@@ -9,6 +9,7 @@ import { updateProfile, updateSettings } from '../database/operations';
 import { getSettingsByProfileId } from '../database/queries';
 import { TouchableOpacity } from 'react-native';
 import { OfflineStatusIndicator } from '../components/OfflineStatusIndicator';
+import { ImagePreviewModal } from '../components/ImagePreviewModal';
 
 interface UserProgress {
     profile_key: string;
@@ -26,6 +27,7 @@ export const LeaderboardScreen: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'completed' | 'ongoing'>('all');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedUserForPreview, setSelectedUserForPreview] = useState<UserProgress | null>(null);
 
     const checkSharingStatus = async () => {
         if (!activeProfile) return;
@@ -174,9 +176,18 @@ export const LeaderboardScreen: React.FC = () => {
             <View style={styles.card}>
                 <View style={styles.cardHeader}>
                     <View style={styles.userProfileInfo}>
-                        <View style={styles.avatarContainer}>
+                        <TouchableOpacity 
+                            style={styles.avatarContainer}
+                            onPress={() => {
+                                if (item.avatar_url && (item.avatar_url.startsWith('http') || item.avatar_url.startsWith('data:') || item.avatar_url.startsWith('file:'))) {
+                                    setSelectedUserForPreview(item);
+                                }
+                            }}
+                            activeOpacity={0.7}
+                            disabled={!item.avatar_url || (!item.avatar_url.startsWith('http') && !item.avatar_url.startsWith('data:') && !item.avatar_url.startsWith('file:'))}
+                        >
                             {renderAvatar(item.avatar_url)}
-                        </View>
+                        </TouchableOpacity>
                         <Text style={styles.userName}>{item.display_name}</Text>
                     </View>
                     <Text style={styles.lastUpdated}>
@@ -291,6 +302,12 @@ export const LeaderboardScreen: React.FC = () => {
                 }
             />
             <OfflineStatusIndicator />
+            <ImagePreviewModal
+                visible={!!selectedUserForPreview}
+                imageUrl={selectedUserForPreview?.avatar_url || null}
+                onClose={() => setSelectedUserForPreview(null)}
+                title={selectedUserForPreview?.display_name ? `${selectedUserForPreview.display_name}'s Avatar` : 'Avatar Preview'}
+            />
         </View>
     );
 };
